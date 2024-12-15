@@ -1,5 +1,7 @@
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const axios = require('axios');
+const fs = require('fs');
+const FormData = require('form-data');
 require('dotenv').config();
 
 const token = process.env.TOKEN;
@@ -66,9 +68,49 @@ const commands = [
           {
             name: 'audio',
             description: 'Only audio?',
-	    type: 5,
-	    required: false,
-	  },
+            type: 5,
+            required: false,
+          },
+          {
+            name: 'video_quality',
+            description: 'Choose video quality',
+            type: 3,
+            required: false,
+            choices: [
+              {
+                name: 'max',
+                value: 'max',
+              },
+              {
+                name: '2160p',
+                value: '2160p',
+              },
+              {
+                name: '1080p',
+                value: '1080',
+              },
+              {
+                name: '720p',
+                value: '720',
+              },
+              {
+                name: '480p',
+                value: '480',
+              },
+              {
+                name: '360p',
+                value: '360',
+              },
+              {
+                name: '240p',
+                value: '240',
+              },
+              {
+                name: '144p',
+                value: '144',
+              },
+            ]
+          },
         ],
       },
     ],
@@ -276,40 +318,90 @@ async function handleAICommand(interaction) {
   }
 }
 
+async function uploadFileToCatbox(fileBuffer, fileName, apiHost = "https://catbox.moe/user/api.php") {
+  try {
+      const form = new FormData();
+      form.append('reqtype', 'fileupload');
+      form.append('fileToUpload', fileBuffer, fileName);
+
+      const response = await axios.post(apiHost, form, {
+          headers: form.getHeaders(),
+      });
+
+      if (response.status === 200 && typeof response.data === 'string') {
+          return response.data.trim();
+      } else {
+          throw new Error(`Unexpected response: ${response.status} - ${response.data}`);
+      }
+  } catch (error) {
+      if (error.response && error.response.status === 413) {
+          console.error('Catbox upload failed: File too large.');
+          return '❌ File too large for Catbox upload.';
+      }
+      throw new Error(`Failed to upload file: ${error.message}`);
+  }
+}
+
 async function handleCobaltCommand(interaction) {
   try {
-    const url = interaction.options.getString('url');
-    const audioOnly = interaction.options.getBoolean('audio') || false;
-    if (!url) {
-      return await interaction.reply({ content: '⚠️ Please provide a valid URL.', ephemeral: true });
-    }
+      const url = interaction.options.getString('url');
+      const audioOnly = interaction.options.getBoolean('audio') || false;
+      if (!url) {
+          return await interaction.reply({ content: '⚠️ Please provide a valid URL.', ephemeral: true });
+      }
 
-    await interaction.deferReply({ ephemeral: false });
-    await interaction.editReply({ content: '🔄 Processing your request, please wait...' });
+      await interaction.deferReply({ ephemeral: false });
+      await interaction.editReply({ content: '🔄 Processing your request, please wait...' });
 
-    const data = {
-      url,
-      alwaysProxy: true,
-      filenameStyle: 'basic',
-      videoQuality: '720',
-      downloadMode: audioOnly ? 'audio' : 'auto',
-    };
+      const data = {
+          url,
+          alwaysProxy: true,
+          filenameStyle: 'basic',
+          videoQuality: '720',
+          downloadMode: audioOnly ? 'audio' : 'auto',
+      };
 
-    // Dev note: You could replace this with your own self-hosted Cobalt.tools instance, but you're free to use my instance directly, just don't be a jerk.
-    const response = await axios.post('https://cobalt.liba.lol/', data, {
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-    });
+      let cobaltResponse;
+      try {
+          // Dev note: You could replace this with your own self-hosted Cobalt.tools instance, but you're free to use my instance directly, just don't be a jerk.
+          cobaltResponse = await axios.post('https://cobalt.liba.lol/', data, {
+              headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'application/json',
+              },
+          });
+      } catch (error) {
+          console.error('Error calling Cobalt API:', error.response?.data || error.message);
+          throw new Error(`Cobalt API error: ${error.response?.data || error.message}`);
+      }
 
-    const fileResponse = await axios.get(response.data.url, { responseType: 'arraybuffer' });
-    const attachment = new AttachmentBuilder(Buffer.from(fileResponse.data), { name: response.data.filename });
+      let fileResponse;
+      try {
+          fileResponse = await axios.get(cobaltResponse.data.url, { responseType: 'arraybuffer' });
+      } catch (error) {
+          console.error('Error downloading file from Cobalt:', error.message);
+          throw new Error(`Download error: ${error.message}`);
+      }
 
-    await interaction.editReply({ content: '🎬 Output:', files: [attachment] });
+      const fileBuffer = Buffer.from(fileResponse.data);
+      const fileName = cobaltResponse.data.filename;
+      const fileSizeMB = Buffer.byteLength(fileBuffer) / (1024 * 1024);
+
+      if (fileSizeMB > 8) {
+          await interaction.editReply({ content: '📤 File too large for Discord. Uploading to Catbox...' });
+          const catboxUrl = await uploadFileToCatbox(fileBuffer, fileName);
+          await interaction.editReply({ content: `🎬 File uploaded successfully: ${catboxUrl}` });
+      } else {
+          const attachment = new AttachmentBuilder(fileBuffer, { name: fileName });
+          await interaction.editReply({ content: '🎬 Output:', files: [attachment] });
+      }
   } catch (error) {
-    console.error(error.response ? error.response.data : error.message);
-    await interaction.editReply({ content: '❌ An error occurred while processing your request.' });
+      console.error('An error occurred:', error.message, error.response?.data || error);
+      try {
+          await interaction.editReply({ content: '❌ An error occurred while processing your request.\n```\n' + (error.response?.data || error.message) + '\n```' });
+      } catch (discordError) {
+          console.error('Failed to edit reply on Discord:', discordError.message);
+      }
   }
 }
 
