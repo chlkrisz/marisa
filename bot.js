@@ -346,6 +346,7 @@ async function handleCobaltCommand(interaction) {
   try {
       const url = interaction.options.getString('url');
       const audioOnly = interaction.options.getBoolean('audio') || false;
+      const videoQuality = interaction.options.getString('video_quality') || "720"; 
       if (!url) {
           return await interaction.reply({ content: '⚠️ Please provide a valid URL.', ephemeral: true });
       }
@@ -357,7 +358,7 @@ async function handleCobaltCommand(interaction) {
           url,
           alwaysProxy: true,
           filenameStyle: 'basic',
-          videoQuality: '720',
+          videoQuality: videoQuality,
           downloadMode: audioOnly ? 'audio' : 'auto',
       };
 
