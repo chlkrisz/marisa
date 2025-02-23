@@ -4,16 +4,15 @@ const fs = require('fs');
 const FormData = require('form-data');
 require('dotenv').config();
 
-const token = process.env.TOKEN;
+const devMode = process.env.DEV === '1';
+const token = devMode ? process.env.DEV_TOKEN : process.env.TOKEN;
 const ownerId = process.env.OWNER_ID;
-const clientId = process.env.CLIENT_ID;
+const clientId = devMode ? process.env.DEV_CLIENT_ID : process.env.CLIENT_ID;
+
+const rest = new REST({ version: '10' }).setToken(token);
 
 const client = new Client({
   intents: Object.values(GatewayIntentBits),
-});
-
-client.once('ready', () => {
-  console.log(`Logged in as ${client.user.tag}!`);
 });
 
 const commands = [
@@ -134,6 +133,11 @@ const commands = [
     ],
   },
 ];
+
+client.once('ready', async () => {
+  await rest.put(Routes.applicationCommands(clientId), { body: commands });
+  console.log(`Logged in as ${client.user.tag}!`);
+});
 
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
@@ -347,8 +351,8 @@ async function handleCobaltCommand(interaction) {
       const url = interaction.options.getString('url');
       const audioOnly = interaction.options.getBoolean('audio') || false;
       const videoQuality = interaction.options.getString('video_quality') || "720"; 
-      if (!url) {
-          return await interaction.reply({ content: '⚠️ Please provide a valid URL.', ephemeral: true });
+      if (!url || !url.startsWith('http') || !url.includes('://') || !url.includes('.')) {
+          return await interaction.reply({ content: '⚠️ Please provide a valid URL.', ephemeral: false });
       }
 
       await interaction.deferReply({ ephemeral: false });
@@ -372,8 +376,7 @@ async function handleCobaltCommand(interaction) {
               },
           });
       } catch (error) {
-          console.error('Error calling Cobalt API:', error.response?.data || error.message);
-          throw new Error(`Cobalt API error: ${error.response?.data || error.message}`);
+          throw new Error(`Cobalt API error: ${JSON.stringify(error.response?.data) || error.message}`);
       }
 
       let fileResponse;
@@ -399,7 +402,7 @@ async function handleCobaltCommand(interaction) {
   } catch (error) {
       console.error('An error occurred:', error.message, error.response?.data || error);
       try {
-          await interaction.editReply({ content: '❌ An error occurred while processing your request.\n```\n' + (error.response?.data || error.message) + '\n```' });
+          await interaction.editReply({ content: '❌ An error occurred while processing your request.\n```\n' + (JSON.stringify(error.response?.data) || error.message) + '\n```' });
       } catch (discordError) {
           console.error('Failed to edit reply on Discord:', discordError.message);
       }
@@ -412,8 +415,6 @@ function formatUptime(uptime) {
   const seconds = Math.floor(uptime % 60);
   return `${hours}h ${minutes}m ${seconds}s`;
 }
-
-const rest = new REST({ version: '10' }).setToken(token);
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot || !message.content.startsWith('$')) return;
