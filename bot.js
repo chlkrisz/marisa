@@ -396,6 +396,7 @@ async function handleCobaltCommand(interaction) {
           const catboxUrl = await uploadFileToCatbox(fileBuffer, fileName);
           await interaction.editReply({ content: `🎬 File uploaded successfully: ${catboxUrl}` });
       } else {
+          await interaction.editReply({ content: "📤 Uploading file, please wait..." })
           const attachment = new AttachmentBuilder(fileBuffer, { name: fileName });
           await interaction.editReply({ content: '🎬 Output:', files: [attachment] });
       }
