@@ -391,7 +391,7 @@ async function handleCobaltCommand(interaction) {
       const fileName = cobaltResponse.data.filename;
       const fileSizeMB = Buffer.byteLength(fileBuffer) / (1024 * 1024);
 
-      if (fileSizeMB > 8) {
+      if (fileSizeMB > 500) {
           await interaction.editReply({ content: '📤 File too large for Discord. Uploading to Catbox...' });
           const catboxUrl = await uploadFileToCatbox(fileBuffer, fileName);
           await interaction.editReply({ content: `🎬 File uploaded successfully: ${catboxUrl}` });
