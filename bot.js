@@ -384,7 +384,7 @@ async function handleCobaltCommand(interaction) {
           fileResponse = await axios.get(cobaltResponse.data.url, { responseType: 'arraybuffer' });
       } catch (error) {
           console.error('Error downloading file from Cobalt:', error.message);
-          throw new Error(`Download error: ${error.message}`);
+          throw new Error(`Download error: ${JSON.stringify(error.response?.data) || error.message}`);
       }
 
       const fileBuffer = Buffer.from(fileResponse.data);
