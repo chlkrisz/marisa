@@ -499,26 +499,48 @@ async function handleCobaltCommand(interaction) {
         const mediaItemsCatbox = catboxUrls.map((url) =>
           new MediaGalleryItemBuilder().setURL(url),
         );
+        const mediaPickerContainer =
+          new ContainerBuilder().addTextDisplayComponents(
+            new TextDisplayBuilder().setContent("### 🎬 Output:"),
+          );
+
+        if (
+          [
+            "mp4",
+            "webm",
+            "mkv",
+            "mov",
+            "avi",
+            "png",
+            "jpg",
+            "jpeg",
+            "gif",
+            "avif",
+            "webp",
+          ].some((ext) => catboxUrls[0].toLowerCase().endsWith(ext))
+        ) {
+          mediaPickerContainer.addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems(...mediaItemsCatbox),
+          );
+        } else {
+          mediaPickerContainer.addFileComponents(
+            ...catboxUrls.map((url) => new FileBuilder().setURL(url)),
+          );
+        }
+
+        mediaPickerContainer
+          .addSeparatorComponents(
+            new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
+          )
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              `-# type: picker, ${totalSizeMB.toFixed(2)} MB, took ${(Date.now() - stt) / 1000} seconds`,
+            ),
+          );
         await interaction.editReply({
           flags: MessageFlags.IsComponentsV2,
           files: [...attachments],
-          components: [
-            new ContainerBuilder()
-              .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent("### 🎬 Output:"),
-              )
-              .addMediaGalleryComponents(
-                new MediaGalleryBuilder().addItems(...mediaItemsCatbox),
-              )
-              .addSeparatorComponents(
-                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
-              )
-              .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                  `-# type: picker, ${totalSizeMB.toFixed(2)} MB, took ${(Date.now() - stt) / 1000} seconds`,
-                ),
-              ),
-          ],
+          components: [],
         });
       } else {
         await interaction.editReply({
@@ -699,7 +721,7 @@ async function handleCobaltCommand(interaction) {
               new MediaGalleryItemBuilder().setURL(catboxUrl),
             ),
           );
-        if (type === "video") {
+        if (["video", "image"].includes(type)) {
           catboxContainer.addMediaGalleryComponents(
             new MediaGalleryBuilder().addItems(
               new MediaGalleryItemBuilder().setURL(catboxUrl),
@@ -738,7 +760,7 @@ async function handleCobaltCommand(interaction) {
         const outputContainer = new ContainerBuilder().addTextDisplayComponents(
           new TextDisplayBuilder().setContent("### 🎬 Output:"),
         );
-        if (type === "video") {
+        if (["video", "image"].includes(type)) {
           outputContainer.addMediaGalleryComponents(
             new MediaGalleryBuilder().addItems(
               new MediaGalleryItemBuilder().setURL(`attachment://${fileName}`),
@@ -755,7 +777,7 @@ async function handleCobaltCommand(interaction) {
           )
           .addTextDisplayComponents(
             new TextDisplayBuilder().setContent(
-              `-# type: ${type}, ${resolution}, ${length === "N/A" ? "" : length + ", "}${sizeDisplay}, ${frameCount === 0 ? "" : frameCount + " frames, "}took ${(Date.now() - stt) / 1000} seconds`,
+              `-# type: ${type}, ${resolution === "N/A" ? "" : resolution + ", "}${length === "N/A" ? "" : length + ", "}${sizeDisplay}, ${frameCount === 0 ? "" : frameCount + " frames, "}took ${(Date.now() - stt) / 1000} seconds`,
             ),
           );
         await interaction.editReply({
