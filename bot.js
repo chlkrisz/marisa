@@ -559,33 +559,82 @@ async function handleCobaltCommand(interaction) {
             attachmentChunks.push(attachments.slice(i, i + 10));
           }
           //first chunk
+          const firstChunkContainer =
+            new ContainerBuilder().addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(`### 🎬 Output:`),
+            );
+          if (
+            [
+              "mp4",
+              "webm",
+              "mkv",
+              "mov",
+              "avi",
+              "png",
+              "jpg",
+              "jpeg",
+              "gif",
+              "avif",
+              "webp",
+            ].some((ext) =>
+              attachmentChunks[0][0].name.toLowerCase().endsWith(ext),
+            )
+          ) {
+            firstChunkContainer.addMediaGalleryComponents(
+              new MediaGalleryBuilder().addItems(...mediaItemChunks[0]),
+            );
+          } else {
+            firstChunkContainer.addFileComponents(
+              ...attachmentChunks[0].map((att) =>
+                new FileBuilder().setURL(`attachment://${att.name}`),
+              ),
+            );
+          }
+          firstChunkContainer
+            .addSeparatorComponents(
+              new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
+            )
+            .addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(
+                `-# (chunk 1/${mediaItemChunks.length})`,
+              ),
+            );
           await interaction.editReply({
             flags: MessageFlags.IsComponentsV2,
             files: [...attachmentChunks[0]],
-            components: [
-              new ContainerBuilder()
-                .addTextDisplayComponents(
-                  new TextDisplayBuilder().setContent(`### 🎬 Output:`),
-                )
-                .addMediaGalleryComponents(
-                  new MediaGalleryBuilder().addItems(...mediaItemChunks[0]),
-                )
-                .addSeparatorComponents(
-                  new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
-                )
-                .addTextDisplayComponents(
-                  new TextDisplayBuilder().setContent(
-                    `-# (chunk 1/${mediaItemChunks.length})`,
-                  ),
-                ),
-            ],
+            components: [firstChunkContainer],
           });
           //other chunks
           for (let i = 1; i < mediaItemChunks.length; i++) {
-            const fasz = new ContainerBuilder()
-              .addMediaGalleryComponents(
-                new MediaGalleryBuilder().addItems(...mediaItemChunks[i]),
+            const fasz = new ContainerBuilder();
+            if (
+              [
+                "mp4",
+                "webm",
+                "mkv",
+                "mov",
+                "avi",
+                "png",
+                "jpg",
+                "jpeg",
+                "gif",
+                "avif",
+                "webp",
+              ].some((ext) =>
+                attachmentChunks[i][0].name.toLowerCase().endsWith(ext),
               )
+            ) {
+              fasz.addMediaGalleryComponents(
+                new MediaGalleryBuilder().addItems(...mediaItemChunks[i]),
+              );
+            } else {
+              fasz.addFileComponents(
+                ...attachmentChunks[i].map((att) =>
+                  new FileBuilder().setURL(`attachment://${att.name}`),
+                ),
+              );
+            }
+            fasz
               .addSeparatorComponents(
                 new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
               )
