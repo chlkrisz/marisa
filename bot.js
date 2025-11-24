@@ -14,6 +14,7 @@ const {
   Events,
   MediaGalleryBuilder,
   MediaGalleryItemBuilder,
+  FileBuilder,
 } = require("discord.js");
 const axios = require("axios");
 const fs = require("fs");
@@ -605,8 +606,9 @@ async function handleCobaltCommand(interaction) {
         }
       }
     } else {
-      const fileBuffer = Buffer.from(fileResponse.data);
-      const fileName = cobaltResponse.data.filename;
+      const fileBuffer = Buffer.from(fileResponses[0].data);
+      let fileName = cobaltResponse.data.filename;
+      //let fileName = "output";
       const fileSizeMB = Buffer.byteLength(fileBuffer) / (1024 * 1024);
 
       let sizeDisplay;
@@ -622,6 +624,7 @@ async function handleCobaltCommand(interaction) {
       let frameCount = 0;
 
       const ext = fileName.split(".").pop().toLowerCase();
+      fileName = fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
 
       if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) {
         type = "image";
@@ -687,27 +690,38 @@ async function handleCobaltCommand(interaction) {
           ],
         });
         const catboxUrl = await uploadFileToCatbox(fileBuffer, fileName);
+        const catboxContainer = new ContainerBuilder()
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent("### 🎬 Output:"),
+          )
+          .addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems(
+              new MediaGalleryItemBuilder().setURL(catboxUrl),
+            ),
+          );
+        if (type === "video") {
+          catboxContainer.addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems(
+              new MediaGalleryItemBuilder().setURL(catboxUrl),
+            ),
+          );
+        } else {
+          catboxContainer.addFileComponents(
+            new FileBuilder().setURL(catboxUrl),
+          );
+        }
+        catboxContainer
+          .addSeparatorComponents(
+            new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
+          )
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              `-# type: ${type}, ${resolution === "N/A" ? "" : resolution + ", "}${length === "N/A" ? "" : length + ", "}${sizeDisplay}, ${frameCount === "N/A" ? "" : frameCount + " frames, "}took ${(Date.now() - stt) / 1000} seconds`,
+            ),
+          );
         await interaction.editReply({
           flags: MessageFlags.IsComponentsV2,
-          components: [
-            new ContainerBuilder()
-              .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent("### 🎬 Output:"),
-              )
-              .addMediaGalleryComponents(
-                new MediaGalleryBuilder().addItems(
-                  new MediaGalleryItemBuilder().setURL(catboxUrl),
-                ),
-              )
-              .addSeparatorComponents(
-                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
-              )
-              .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                  `-# type: ${type}, ${resolution}, ${length === "N/A" ? "" : length + ", "}${sizeDisplay}, ${frameCount === 0 ? "" : frameCount + " frames, "}took ${(Date.now() - stt) / 1000} seconds`,
-                ),
-              ),
-          ],
+          components: [catboxContainer],
         });
       } else {
         await interaction.editReply({
@@ -721,29 +735,32 @@ async function handleCobaltCommand(interaction) {
         const attachment = new AttachmentBuilder(fileBuffer, {
           name: fileName,
         });
+        const outputContainer = new ContainerBuilder().addTextDisplayComponents(
+          new TextDisplayBuilder().setContent("### 🎬 Output:"),
+        );
+        if (type === "video") {
+          outputContainer.addMediaGalleryComponents(
+            new MediaGalleryBuilder().addItems(
+              new MediaGalleryItemBuilder().setURL(`attachment://${fileName}`),
+            ),
+          );
+        } else {
+          outputContainer.addFileComponents(
+            new FileBuilder().setURL(`attachment://${fileName}`),
+          );
+        }
+        outputContainer
+          .addSeparatorComponents(
+            new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
+          )
+          .addTextDisplayComponents(
+            new TextDisplayBuilder().setContent(
+              `-# type: ${type}, ${resolution}, ${length === "N/A" ? "" : length + ", "}${sizeDisplay}, ${frameCount === 0 ? "" : frameCount + " frames, "}took ${(Date.now() - stt) / 1000} seconds`,
+            ),
+          );
         await interaction.editReply({
           flags: MessageFlags.IsComponentsV2,
-          components: [
-            new ContainerBuilder()
-              .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent("### 🎬 Output:"),
-              )
-              .addMediaGalleryComponents(
-                new MediaGalleryBuilder().addItems(
-                  new MediaGalleryItemBuilder().setURL(
-                    `attachment://${fileName}`,
-                  ),
-                ),
-              )
-              .addSeparatorComponents(
-                new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
-              )
-              .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                  `-# type: ${type}, ${resolution}, ${length === "N/A" ? "" : length + ", "}${sizeDisplay}, ${frameCount === 0 ? "" : frameCount + " frames, "}took ${(Date.now() - stt) / 1000} seconds`,
-                ),
-              ),
-          ],
+          components: [outputContainer],
           files: [attachment],
         });
       }
