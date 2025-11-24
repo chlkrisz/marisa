@@ -540,7 +540,7 @@ async function handleCobaltCommand(interaction) {
         await interaction.editReply({
           flags: MessageFlags.IsComponentsV2,
           files: [...attachments],
-          components: [],
+          components: [mediaPickerContainer],
         });
       } else {
         await interaction.editReply({
