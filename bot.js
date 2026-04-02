@@ -70,6 +70,25 @@ const commands = [
         type: 1,
       },
       {
+        name: "random",
+        description: "Randomly choose an item from a list",
+        type: 1,
+        options: [
+          {
+            name: "items",
+            description: "List of items, separated by commas (,)",
+            type: 3,
+            required: true,
+          },
+          {
+            name: "count",
+            description: "How many items to choose (default: 1)",
+            type: 4,
+            required: false,
+          }
+        ],
+      },
+      {
         name: "say",
         description: "Echoes your message",
         type: 1,
@@ -204,7 +223,7 @@ async function handleInfoCommands(interaction, subcommand) {
       try {
         const res = await axios.get("https://ipinfo.io/json");
         hostCountry = res.data.country || "N/A";
-      } catch {}
+      } catch { }
       const botinfoSect = new SectionBuilder()
         .addTextDisplayComponents(
           new TextDisplayBuilder().setContent("### 🤖 Bot Information"),
@@ -365,6 +384,56 @@ async function handleFunCommands(interaction, subcommand) {
       }
       break;
 
+    case "random":
+      const itemsString = interaction.options.getString("items");
+      const count = interaction.options.getInteger("count") || 1;
+      if (!itemsString) {
+        await interaction.reply({
+          content: "⚠️ Please provide a list of items separated by commas.",
+          ephemeral: true,
+        });
+      } else {
+        const items = itemsString.split(",").map((item) => item.trim()).filter(item => item.length > 0);
+        if (items.length === 0) {
+          await interaction.reply({
+            content: "⚠️ Please provide a valid list of items.",
+            ephemeral: true,
+          });
+        } else {
+          const randomItems = [];
+          if (count == items.length || count > items.length) {
+            while (items.length > 0) {
+              const randomIndex = Math.floor(Math.random() * items.length);
+              randomItems.push(items[randomIndex]);
+              items.splice(randomIndex, 1);
+            }
+          } else {
+            for (let i = 0; i < Math.min(count, items.length); i++) {
+              const randomIndex = Math.floor(Math.random() * items.length);
+              randomItems.push(items[randomIndex]);
+              items.splice(randomIndex, 1);
+            }
+          }
+          const randomContainer = new ContainerBuilder()
+            .addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(`### Output:`),
+              ...randomItems.map((item) => new TextDisplayBuilder().setContent(`**${item}**`)),
+            )
+            .addSeparatorComponents(
+              new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
+            )
+            .addTextDisplayComponents(
+              new TextDisplayBuilder().setContent(
+                `-# Requested by ${interaction.user.username}, processed in ${(Date.now() - stt) / 1000} seconds`,
+              ),
+            );
+          await interaction.reply({
+            flags: MessageFlags.IsComponentsV2,
+            components: [randomContainer],
+          });
+        }
+      }
+      break;
     default:
       break;
   }
@@ -716,7 +785,7 @@ async function handleCobaltCommand(interaction) {
           if (info && info.width && info.height) {
             resolution = `${info.width}x${info.height}`;
           }
-        } catch {}
+        } catch { }
       } else if (
         [
           "mp4",
@@ -760,7 +829,7 @@ async function handleCobaltCommand(interaction) {
               resolve();
             });
           });
-        } catch {}
+        } catch { }
       }
 
       if (fileSizeMB > 250) {
@@ -860,8 +929,8 @@ async function handleCobaltCommand(interaction) {
         components: [
           new TextDisplayBuilder().setContent(
             "❌ An error occurred while processing your request.\n```\n" +
-              (JSON.stringify(error.response?.data) || error.message) +
-              "\n```",
+            (JSON.stringify(error.response?.data) || error.message) +
+            "\n```",
           ),
         ],
       });
