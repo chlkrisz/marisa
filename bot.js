@@ -52,6 +52,12 @@ async function countryLookup() {
 
 const commands = [
   {
+    name: "feri",
+    description: "Keresett a Feri",
+    integration_types: [0, 1],
+    contexts: [0, 1, 2],
+  },
+  {
     name: "fun",
     description: "Fun commands",
     integration_types: [0, 1],
@@ -186,6 +192,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
 async function handleInfoCommands(interaction, subcommand) {
   const stt = Date.now();
   switch (subcommand) {
+    case "feri":
+      await interaction.reply({
+        content: "https://www.keresettferi.hu",
+        ephemeral: false,
+      });
+      break;
     case "bot-info":
       await interaction.deferReply();
       let hostCountry = "N/A";
