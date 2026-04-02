@@ -184,6 +184,13 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await handleFunCommands(interaction, subcommand);
       break;
 
+    case "feri":
+      await interaction.reply({
+        content: "https://www.keresettferi.hu",
+        ephemeral: false,
+      });
+      break;
+
     default:
       break;
   }
@@ -192,12 +199,6 @@ client.on(Events.InteractionCreate, async (interaction) => {
 async function handleInfoCommands(interaction, subcommand) {
   const stt = Date.now();
   switch (subcommand) {
-    case "feri":
-      await interaction.reply({
-        content: "https://www.keresettferi.hu",
-        ephemeral: false,
-      });
-      break;
     case "bot-info":
       await interaction.deferReply();
       let hostCountry = "N/A";
