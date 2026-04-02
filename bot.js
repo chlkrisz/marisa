@@ -172,27 +172,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   const commandGroup = interaction.commandName;
-  const subcommand = interaction.options.getSubcommand();
-
-  if (!commandGroup || !subcommand) return;
 
   switch (commandGroup) {
-    case "info":
+    case "info": {
+      const subcommand = interaction.options.getSubcommand();
       await handleInfoCommands(interaction, subcommand);
       break;
+    }
 
-    case "fun":
+    case "fun": {
+      const subcommand = interaction.options.getSubcommand();
       await handleFunCommands(interaction, subcommand);
       break;
+    }
 
     case "feri":
       await interaction.reply({
         content: "https://www.keresettferi.hu",
         ephemeral: false,
       });
-      break;
-
-    default:
       break;
   }
 });
