@@ -1,36 +1,39 @@
-const axios = require("axios");
 const FormData = require("form-data");
 
 async function uploadFileToCatbox(
-  fileBuffer,
-  fileName,
-  apiHost = "https://catbox.moe/user/api.php",
+    fileBuffer,
+    fileName,
+    apiHost = "https://catbox.moe/user/api.php",
 ) {
-  try {
-    const form = new FormData();
-    form.append("reqtype", "fileupload");
-    form.append("fileToUpload", fileBuffer, fileName);
+    try {
+        const form = new FormData();
+        form.append("reqtype", "fileupload");
+        form.append("fileToUpload", fileBuffer, fileName);
 
-    const response = await axios.post(apiHost, form, {
-      headers: form.getHeaders(),
-    });
+        const response = await fetch(apiHost, {
+            method: "POST",
+            headers: form.getHeaders(),
+            body: form,
+            duplex: "half",
+        });
 
-    if (response.status === 200 && typeof response.data === "string") {
-      return response.data.trim();
-    } else {
-      throw new Error(
-        `Unexpected response: ${response.status} - ${response.data}`,
-      );
+        const data = await response.text();
+
+        if (response.status === 413) {
+            console.error("Catbox upload failed: File too large.");
+            return "❌ File too large for Catbox upload.";
+        }
+
+        if (response.ok && typeof data === "string") {
+            return data.trim();
+        }
+
+        throw new Error(`Unexpected response: ${response.status} - ${data}`);
+    } catch (error) {
+        throw new Error(`Failed to upload file: ${error.message}`);
     }
-  } catch (error) {
-    if (error.response && error.response.status === 413) {
-      console.error("Catbox upload failed: File too large.");
-      return "❌ File too large for Catbox upload.";
-    }
-    throw new Error(`Failed to upload file: ${error.message}`);
-  }
 }
 
 module.exports = {
-  uploadFileToCatbox,
+    uploadFileToCatbox,
 };

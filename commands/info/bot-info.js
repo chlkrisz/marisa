@@ -7,7 +7,6 @@ const {
   ThumbnailBuilder,
   MessageFlags,
 } = require("discord.js");
-const axios = require("axios");
 const fs = require("fs");
 const { parse } = require("csv-parse");
 require("dotenv").config();
@@ -39,7 +38,8 @@ async function botInfo(client, interaction, stt, commands) {
     await interaction.deferReply();
     let hostCountry = "N/A";
     try {
-        const res = await axios.get("https://ipinfo.io/json");
+        const response = await fetch("https://ipinfo.io/json");
+        const res = { data: await response.json() };
         hostCountry = res.data.country || "N/A";
     } catch { }
     const botinfoSect = new SectionBuilder()

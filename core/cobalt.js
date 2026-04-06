@@ -1,4 +1,3 @@
-const axios = require("axios");
 const probe = require("probe-image-size");
 const ffmpeg = require("fluent-ffmpeg");
 const tmp = require("tmp");
@@ -9,49 +8,52 @@ async function downloadFromCobalt(url, audioOnly, videoQuality) {
         url,
         alwaysProxy: true,
         filenameStyle: "basic",
-        videoQuality: videoQuality,
+        videoQuality,
         downloadMode: audioOnly ? "audio" : "auto",
     };
 
     let cobaltResponse;
     let type = "single";
-    
-    try {
-        cobaltResponse = await axios.post(process.env.COBALT_URL, data, {
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-            },
-        });
-        if (cobaltResponse.data.status === "picker") type = "picker";
-    } catch (error) {
-        throw new Error(
-            `Cobalt API error: ${JSON.stringify(error.response?.data) || error.message}`,
-        );
+
+    // POST request
+    const response = await fetch(process.env.COBALT_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Cobalt API error: ${errText}`);
+    }
+
+    const responseData = await response.json();
+    cobaltResponse = { data: responseData };
+
+    if (responseData.status === "picker") {
+        type = "picker";
     }
 
     let fileResponses = [];
-    try {
-        if (type === "picker" && Array.isArray(cobaltResponse.data.picker)) {
-            for (const item of cobaltResponse.data.picker) {
-                fileResponses.push(
-                    await axios.get(item.url, {
-                        responseType: "arraybuffer",
-                    }),
-                );
-            }
-        } else {
-            fileResponses.push(
-                await axios.get(cobaltResponse.data.url, {
-                    responseType: "arraybuffer",
-                }),
-            );
+
+    const urls =
+        type === "picker" && Array.isArray(responseData.picker)
+            ? responseData.picker.map((item) => item.url)
+            : [responseData.url];
+
+    for (const fileUrl of urls) {
+        const fileRes = await fetch(fileUrl);
+
+        if (!fileRes.ok) {
+            throw new Error(`Download error: ${fileRes.statusText}`);
         }
-    } catch (error) {
-        console.error("Error downloading file from Cobalt:", error.message);
-        throw new Error(
-            `Download error: ${JSON.stringify(error.response?.data) || error.message}`,
-        );
+
+        const buffer = Buffer.from(await fileRes.arrayBuffer());
+
+        fileResponses.push({ data: buffer });
     }
 
     return {

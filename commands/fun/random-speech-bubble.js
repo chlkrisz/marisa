@@ -1,18 +1,21 @@
-const axios = require("axios");
 const { ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MediaGalleryBuilder, MediaGalleryItemBuilder, AttachmentBuilder, MessageFlags } = require("discord.js");
 
 async function randomSpeechBubble(interaction, stt) {
     await interaction.deferReply();
     try {
-        const response = await axios.get(
+        const response = await fetch(
             "https://api.github.com/repos/chlkrisz/speech-bubbles/contents/gifs",
         );
-        const data = response.data;
+        const data = await response.json();
         const randomGif =
             data[Math.floor(Math.random() * data.length)].download_url;
-        const gifResponse = await axios.get(randomGif, {
-            responseType: "arraybuffer",
-        });
+        const res = await fetch(randomGif);
+        if (!res.ok) {
+            throw new Error(`Failed to fetch GIF: ${res.status} ${res.statusText}`);
+        }
+        const gifResponse = {
+            data: await res.arrayBuffer(),
+        };
         const file = new AttachmentBuilder(Buffer.from(gifResponse.data), {
             name: "speechbubble.gif",
         });
