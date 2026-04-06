@@ -22,13 +22,17 @@ async function downloadWithYtdlp(url, audioOnly = false, quality = "720") {
 
         if (audioOnly) {
             args.push("-f", "bestaudio");
-            args.push("-t", "mp3");
+            args.push("-x");
+            args.push("--audio-format", "mp3");
         } else if (quality !== "max") {
-            args.push("-f", `bestvideo[height<=?${quality}]+bestaudio`);
-            args.push("-t", "mp4");
+            args.push(
+                "-f",
+                `bestvideo[height<=?${quality}]+bestaudio/best[height<=?${quality}]`
+            );
+            args.push("--merge-output-format", "mp4");
         } else {
-            args.push("-f", "bestvideo+bestaudio");
-            args.push("-t", "mp4")
+            args.push("-f", "bestvideo+bestaudio/best");
+            args.push("--merge-output-format", "mp4");
         }
 
         const result = await executeYtdlp(args);
