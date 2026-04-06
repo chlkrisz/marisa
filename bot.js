@@ -95,6 +95,12 @@ const commands = [
             required: false,
           },
           {
+            name: "force_ytdlp",
+            description: "YEAAAH BABYYYY YTDLP I LOVE YTDLP LETS FUCKING GOOOOOOO YTDLP FTW YES YES YES LETS GOOOOOOO",
+            type: 5,
+            required: false,
+          },
+          {
             name: "video_quality",
             description: "Choose video quality",
             type: 3,

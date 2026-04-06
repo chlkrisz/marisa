@@ -19,6 +19,7 @@ async function cobalt(interaction, stt) {
         const audioOnly = interaction.options.getBoolean("audio") || false;
         const videoQuality =
             interaction.options.getString("video_quality") || "720";
+        const force_ytdlp = interaction.options.getBoolean("force_ytdlp") || false;
         if (
             !url ||
             !url.startsWith("http") ||
@@ -32,6 +33,86 @@ async function cobalt(interaction, stt) {
         }
 
         await interaction.deferReply();
+
+        if(force_ytdlp) {
+            //WOOHOOOOOO LETS GOOOOOOOOOOO YT-DLP BABYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY YEEEEEEEEEEEEEEEEEEEEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH
+            const ytDlpResult = await downloadWithYtdlp(
+                interaction.options.getString("url"),
+                interaction.options.getBoolean("audio") || false,
+                interaction.options.getString("video_quality") || "720",
+            );
+
+            const attachment = new AttachmentBuilder(ytDlpResult.buffer, {
+                name: ytDlpResult.fileName,
+            });
+            if (ytDlpResult.buffer.length > 250 * 1024 * 1024) {
+                const catboxUrl = await uploadFileToCatbox(
+                    ytDlpResult.buffer,
+                    ytDlpResult.fileName,
+                );
+                await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
+                    components: [
+                        new TextDisplayBuilder().setContent(`📎 File uploaded to Catbox: ${catboxUrl}`),
+                    ],
+                });
+            } else {
+                const mediaPickerContainer =
+                    new ContainerBuilder().addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent("### 🎬 Output:"),
+                    );
+                if (
+                    [
+                        "mp4",
+                        "webm",
+                        "mkv",
+                        "mov",
+                        "avi",
+                        "png",
+                        "jpg",
+                        "jpeg",
+                        "gif",
+                        "avif",
+                        "webp",
+                    ].some((ext) =>
+                        ytDlpResult.fileName.toLowerCase().endsWith(ext),
+                    )
+                ) {
+                    mediaPickerContainer.addMediaGalleryComponents(
+                        new MediaGalleryBuilder().addItems(
+                            new MediaGalleryItemBuilder().setURL(
+                                `attachment://${ytDlpResult.fileName}`,
+                            ),
+                        ),
+                    );
+                } else {
+                    mediaPickerContainer.addFileComponents(
+                        new FileBuilder().setURL(
+                            `attachment://${ytDlpResult.fileName}`,
+                        ),
+                    );
+                }
+
+                mediaPickerContainer
+                    .addSeparatorComponents(
+                        new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small),
+                    )
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent(
+                            `-# type: single, ${(
+                                ytDlpResult.buffer.length /
+                                (1024 * 1024)
+                            ).toFixed(2)} MB, took ${(Date.now() - stt) / 1000} seconds`,
+                        ),
+                    );
+                await interaction.editReply({
+                    flags: MessageFlags.IsComponentsV2,
+                    files: [attachment],
+                    components: [mediaPickerContainer],
+                });
+                return;
+            }
+        }
 
         const { fileResponses, cobaltResponse, type } = await downloadFromCobalt(
             url,
