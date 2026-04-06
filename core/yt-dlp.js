@@ -36,37 +36,17 @@ async function downloadWithYtdlp(url, audioOnly = false, quality = "720") {
         }
 
         const result = await executeYtdlp(args);
-        const fileName = "output.mp4";
-        const filePath = path.join(tmpDir, fileName);
+        const files = fs.readdirSync(tmpDir);
+        if (!files.length) {
+            throw new Error("yt-dlp didn't produce any output files");
+        }
 
-        const waitForFinalMp4 = async (targetPath, timeoutMs = 60000) => {
-            const started = Date.now();
-            let previousSize = -1;
-            let stableReads = 0;
+        const filePath = path.join(tmpDir, files[0]);
 
-            while (Date.now() - started < timeoutMs) {
-            if (fs.existsSync(targetPath)) {
-                const stats = fs.statSync(targetPath);
-                if (stats.size > 0) {
-                if (stats.size === previousSize) {
-                    stableReads++;
-                    if (stableReads >= 2) return;
-                } else {
-                    previousSize = stats.size;
-                    stableReads = 0;
-                }
-                }
-            }
+        if (!fs.existsSync(filePath)) {
+            throw new Error("Output file was not created");
+        }
 
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            }
-
-            throw new Error("Timed out waiting for yt-dlp to finish converting to output.mp4");
-        };
-
-        await waitForFinalMp4(filePath);
-
-        const files = [fileName];
         const buffer = fs.readFileSync(filePath);
 
         if (!buffer || buffer.length === 0) {
